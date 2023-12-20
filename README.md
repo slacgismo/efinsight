@@ -1,4 +1,4 @@
-# Electrification Futures Insight
+# Electrification Futures Insight  <a href="https://zenodo.org/doi/10.5281/zenodo.10413366"><img src="https://zenodo.org/badge/734045844.svg" alt="DOI"></a>
 
 The Electrification Futures Insight project aims to provide the impact of electrification on the load shapes of residential, commercial, industrial, public, and transportation sectors across all U.S. states, for variable electrification adaptation rates for different end-uses, and variable full electrification target years that depend on state and federal policies.
 
@@ -26,3 +26,6 @@ marimo run app.py
 ~~~
 
 For more information on editing a marimo notebook, please refer to the marimo documentation.
+
+## How to cite this work
+Please see the "Cite this repository" link on the landing page of this repository in the right sidebar for the citation in APA and BibTeX formats.
