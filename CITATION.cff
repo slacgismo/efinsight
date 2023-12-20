@@ -1,0 +1,16 @@
+efinsight: 0.1.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Miskovich"
+  given-names: "Sara A."
+  orcid: "https://orcid.org/0000-0002-3302-838X"
+- family-names: "Nijad"
+  given-names: "Mohamed"
+- family-names: "Chassin"
+  given-names: "David"
+  orcid: "https://orcid.org/0000-0002-4914-4270"
+title: "efinsight"
+version: 0.1.0
+doi: 10.5281/zenodo.10413367
+date-released: 2023-12-20
+url: "https://github.com/slacgismo/efinsight"
