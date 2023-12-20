@@ -2,4 +2,4 @@ numpy
 pandas
 matplotlib
 sg2t @ git+https://github.com/slacgismo/sg2t
-marimo==0.1.38
+marimo==0.1.64
