@@ -1,17 +1,28 @@
-# Loadshape forecasting using Marimo
+# Electrification Futures Insight
 
-This notebook requires the use of Marimo. See https://github.com/marimo-team/marimo for installation and operations details.
+The Electrification Futures Insight project aims to provide the impact of electrification on the load shapes of residential, commercial, industrial, public, and transportation sectors across all U.S. states, for variable electrification adaptation rates for different end-uses, and variable full electrification target years that depend on state and federal policies.
 
-## Setup
+## North American Electrification Loadshape Forecasting
+Current EFInsight work is supporting the development of the North American Electrification Loadshape Forecasting tool which can be found [here](https://marimo.io/@gismo/na-electrification-loadshape-forecasting). The tool can also be run locally using [marimo](https://github.com/marimo-team/marimo). 
+
+This tool currently performs loadshape forecasting for residential and commercial buildings using publicly available datasets. Building loadshapes are generated using NREL [ResStock](https://resstock.nrel.gov/) and [ComStock](https://comstock.nrel.gov/) data sets. 
+
+### Methodology 
+Coming soon.
+
+### Environment Setup
+To run the marimo notebook locally, you'll need to install the dependencies. 
 
 ~~~
 python3 -m venv .
 . bin/activate
-python3 -m pip install ../..
+pip install -r requirements.txt
 ~~~
 
-## Run
-
+### Run
+The app can be run with the simple command
 ~~~
 marimo run app.py
 ~~~
+
+For more information on editing a marimo notebook, please refer to the marimo documentation.
