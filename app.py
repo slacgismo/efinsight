@@ -321,9 +321,9 @@ def __(mo):
 
     ## References
 
-    1. Chassin, D.P., S.A. Miskovich, and M. Nijad, "North American Electrification Loadshape Forecasting Tool", SLAC National Accelerator Laboratory, November 2023, URL: <a href="https://github.com/slacgismo/sg2t/blob/main/examples/marimo_notebooks/loadshape_nrel_marimo.py" target="_blank">`https://github.com/slacgismo/sg2t/examples/marimo_notebooks/loadshape_nrel_marimo.py`</a>
+    1. Chassin, D.P., S.A. Miskovich, and M. Nijad, "EFInsight - North American Electrification Loadshape Forecasting Tool", SLAC National Accelerator Laboratory, November 2023, URL: <a href="https://github.com/slacgismo/efinsight" target="_blank">`https://github.com/slacgismo/efinsight`</a>, DOI: <a href="https://zenodo.org/records/10413367" target="_blank">`10.5281/zenodo.10413367`</a>.
 
-    2. Nijad, M., S.A. Miskovich, and D.P. Chassin, "US Electrification Potential Impact on Electric Load Composition", SLAC National Accelerator Laboratory, March 2023, URL: <a href="https://github.com/slacgismo/sg2t/blob/develop/examples/marimo_notebooks/US_Electrification_Potential_Impact_on_Electric_Load_Composition%20(DRAFT).pdf" target="_blank">`https://github.com/slacgismo/sg2t/blob/develop/examples/marimo_notebooks/US_Electrification_Potential_Impact_on_Electric_Load_Composition%20(DRAFT).pdf`</a>
+    2. Nijad, M., S.A. Miskovich, and D.P. Chassin, "US Electrification Potential Impact on Electric Load Composition", SLAC National Accelerator Laboratory, March 2023. Draft available upon request.
     """)
     return credits_view,
 
