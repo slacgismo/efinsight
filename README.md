@@ -29,3 +29,6 @@ For more information on editing a marimo notebook, please refer to the marimo do
 
 ## How to cite this work
 Please see the "Cite this repository" link on the landing page of this repository in the right sidebar for the citation in APA and BibTeX formats.
+
+## Contributions
+We want your help/feedback! If you would like to contribute, it is recommended to fork the repository and submit a pull request with your changes. Alternatively, you can submit an Issue with a detailed description of what you would like to report.
