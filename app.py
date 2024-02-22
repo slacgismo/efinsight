@@ -18,8 +18,8 @@ def __():
     import datetime as dt
 
     from sg2t.utils.timeseries import Timeseries
-    from datasources.utils import states
-    from datasources.nrel import sector_vars, nrel_get_data
+    from inputs.utils import states
+    from inputs.nrel import sector_vars, nrel_get_data
     return (
         Timeseries,
         calendar,
