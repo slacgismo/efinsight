@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.1.64"
+__generated_with = "0.2.13"
 app = marimo.App(width="full")
 
 
@@ -556,7 +556,7 @@ def __(
     df_agg = df_agg.shift(periods=shift)
     df_agg[shift:] = df_old_values.values
 
-    df_agg["hour"] = pd.date_range("00:00", "23:45", freq="1H").hour
+    df_agg["hour"] = pd.date_range("00:00", "23:45", freq="1h").hour
     # df_agg["minute"] = pd.date_range("00:00", "23:45", freq="1").minute
 
     df_agg["Load Growth"] = (df_agg["New Supply"]/df_agg["Electricity Total"]).values 
