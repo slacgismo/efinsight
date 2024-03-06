@@ -4,7 +4,7 @@ from sg2t.io.loadshapes.nrel.naming import BUILDING_TYPES, HOME_TYPES, CLIMATE_Z
 
 
 sector_vars = {
-    "Resstock" : {
+    "Residential" : {
         "appliance name" : ["Space Heater", "Water Heater", "Clothes Dryer", "Oven"],
         "appliance cols" : {
             "Space Heater" : ["Fuel Oil Heating", "Natural Gas Heating", "Propane Heating"] ,
@@ -18,7 +18,7 @@ sector_vars = {
         "climate zones iecc" : CLIMATE_ZONES_IECC
     },
 
-    "Comstock": {
+    "Commercial": {
         "appliance name": ["Space Heater", "Water Heater", "Cooling", "Interior Equipment"],
         "appliance cols": {
             "Space Heater": ["Other Fuel Heating", "Natural Gas Heating"],
@@ -46,7 +46,7 @@ def nrel_get_data(sector, view, by, type):
 
     api = API()
 
-    if sector == "Resstock":
+    if sector == "Residential":
         if view == "State":
             df = api.get_data_resstock_by_state(by, type)
         elif view == "Climate Zone - Building America":
@@ -54,7 +54,7 @@ def nrel_get_data(sector, view, by, type):
         elif view == "Climate Zone - IECC":
             df = api.get_data_resstock_by_climatezone_iecc(by, type)
 
-    elif sector == "Comstock":
+    elif sector == "Commercial":
         if view == "State":
             df = api.get_data_comstock_by_state(by, type)
         elif view == "Climate Zone - Building America":
