@@ -46,6 +46,8 @@ def __(
     credits_view,
     data_view,
     electrification_view,
+    ev_data_view,
+    ev_loadshape_view,
     loadshape_view,
     mo,
     report_view,
@@ -72,51 +74,22 @@ def __(
             "About" : credits_view,
         }
         _tabs = mo.ui.tabs(res_com_tabs)
+        
     elif sector.value in ["Transportation"]:
         transp_tabs = {
             "Sector" : sector_choice,
             "Introduction" : sector_inputs_transp,
             #"Scenario" : ev_scenario_view,
-            "Loadshape" : loadshape_view,
+            "Loadshape" : ev_loadshape_view,
             # "Results" : results_view,
-            # "Data" : data_view,
-            # "Report" : report_view,
+             "Data" : ev_data_view,
+            "Report" : report_view,
             "About" : credits_view,
         }
         _tabs = mo.ui.tabs(transp_tabs)
+        
     else:
-        raise Exception(f"{sector.value} is not a valid tab state")
-
-
-
-
-
-
-
-    # if get_tab_state() in ["Residential","Commercial"]:
-    #      _tabs = mo.ui.tabs({
-    #         "Sector" : sector_choice,
-    #         "Introduction" : sector_inputs_res_com,
-    #         "Potential" : electrification_view,
-    #         "Loadshape" : loadshape_view,
-    #         "Results" : results_view,
-    #         "Data" : data_view,
-    #         #"Report" : report_view,
-    #         "About" : credits_view,
-    #     })
-    # elif get_tab_state() in ["Transportation"]:
-    #     _tabs = mo.ui.tabs({
-    #         "Sector" : sector_choice,
-    #         "Introduction" : sector_inputs_transp,
-    #         # "Potential" : electrification_view,
-    #         # "Loadshape" : loadshape_view,
-    #         # "Results" : results_view,
-    #         # "Data" : data_view,
-    #         # "Report" : report_view,
-    #         "About" : credits_view,
-    #     })
-    # else:
-    #     raise Exception(f"{get_tab_state()} is not a valid tab state")
+        raise Exception(f"{sector.value} is not a valid option.")
 
     mo.vstack([mo.md("""# North American Electrification Loadshape Forecasting
 
@@ -140,9 +113,6 @@ def __(mo):
     #
     # Import sector details
     #
-    # get_tab_state, set_tab_state = mo.state("Transportation")
-    # sectors_avail = ["Residential", "Commercial", "Transportation"]
-    # sector =  mo.ui.dropdown(sectors_avail, value = get_tab_state(), on_change = set_tab_state)
 
     sectors_avail = ["Residential", "Commercial", "Transportation"]
     sector =  mo.ui.dropdown(sectors_avail, value = "Residential")
@@ -154,6 +124,8 @@ def __(
     credits_view,
     data_view,
     electrification_view,
+    ev_data_view,
+    ev_loadshape_view,
     loadshape_view,
     mo,
     results_view,
@@ -174,10 +146,10 @@ def __(
          report_view =  mo.vstack([
             sector_inputs_transp,
             # ev_scenario_view,
-            loadshape_view,
+            ev_loadshape_view,
             # results_view,
-            # data_view,
-            # credits_view,
+            ev_data_view,
+            credits_view,
         ])
     return report_view,
 
@@ -214,7 +186,7 @@ def __(mo, sector, sector_vars, states):
 
 
 @app.cell
-def __(by, mo, sector, total_evs, type, view):
+def __(by, mo, sector, type, view):
     #
     # Sector inputs tab
     #
@@ -226,7 +198,6 @@ def __(by, mo, sector, total_evs, type, view):
         The first step in generating a loadshape forecast is to identify the region, sector, and subsector for which you want the loadshape forecast, as shown in Table 1.
 
         <table>
-            <caption>Table 1: Scenario description</caption>
             <tr><th align=left>Select the customer subsector (e.g., building type)</th><td align=left>{type}</td></tr>
             <tr><th align=left>Select an aggregation region</th><td align=left>{view}{by}</td><td align=left>(HI and AK not available)</td></tr>
         </table>
@@ -237,15 +208,11 @@ def __(by, mo, sector, total_evs, type, view):
 
     elif sector.value in ["Transportation"]:
         sector_inputs_transp = mo.md(
-            f"""
-        [ADD INTRO]
+        f"""
+        [TODO: ADD INTRO]
 
-        <table>
-            <caption>Table 1: Scenario description</caption>
-            <tr><th align=left>Select the number of EVs </th><td align=left>{total_evs}</td></tr>
-        </table>
 
-        Click on the **`Potential`** tab to develop the electrification potential.
+        Click on the **`Loadshape`** tab to develop the electrification scenario.
         """
         )
     return sector_inputs_res_com, sector_inputs_transp
@@ -303,63 +270,16 @@ def __(
         Start year: {start_year}
         Target year: {target_year}
 
-        <table>
-          <caption>Table 2: End-use electrification adoption rate</caption>
-          <tr>
-            <th>End-use</th>
-            <th>Enable</th>
-            <th>Peak Year</th>
-            <th>Peak Rate </th>
-          </tr>
-          <tr>
-            <th>{appliance_name[0]}</th>
-            <td>{checkbox_eu1}</td>
-        """ +
-        (f"""
-            <td>{eu1_year} </td>
-            <td>{eu1_AR}%  </td>
-        """ if checkbox_eu1.value else "<td colspan=2>(na)</td>") +
-        f"""
-          </tr>
-          <tr>
-            <th>{appliance_name[1]}</th>
-            <td>{checkbox_eu2}</td>
-        """ +
-        (f"""
-            <td>{eu2_year} </td>
-            <td>{eu2_AR}% </td>
-        """ if checkbox_eu2.value else "<td colspan=2>(na)</td>") +
-        f"""
-          </tr>
-          <tr>
-            <th>{appliance_name[2]}</th>
-            <td>{checkbox_eu3}</td>
-        """ +
-        (f"""
-            <td>{eu3_year} </td>
-            <td>{eu3_AR}% </td>
-        """ if checkbox_eu3.value else "<td colspan=2>(na)</td>") +
-        f"""
-          </tr>
-          <tr>
-            <th>{appliance_name[3]}</th>
-            <td>{checkbox_eu4}</td>
-        """ +
-        (f"""
-            <td>{eu4_year} </td>
-            <td>{eu4_AR}% </td>
-          </tr>
-        """ if checkbox_eu4.value else "<td colspan=2>(na)</td>") +
-        f"""  
-        </table>
 
-        <center>
+        | End-use          | Enable          | Peak Year   | Peak Rate (%)  |             
+        |                  |                :|            :|            :|
+        |{appliance_name[0]} | {checkbox_eu1}  |{eu1_year if checkbox_eu1.value else 'N/A'} | {eu1_AR if checkbox_eu1.value else 'N/A'} |
+        |{appliance_name[1]} | {checkbox_eu2}  |{eu2_year if checkbox_eu2.value else 'N/A'} | {eu2_AR if checkbox_eu2.value else 'N/A'} |
+        |{appliance_name[2]} | {checkbox_eu3}  |{eu3_year if checkbox_eu3.value else 'N/A'} | {eu3_AR if checkbox_eu3.value else 'N/A'} |
+        |{appliance_name[3]} | {checkbox_eu4}  |{eu4_year if checkbox_eu4.value else 'N/A'} | {eu4_AR if checkbox_eu4.value else 'N/A'} |
+
 
         {mo.as_html(fig1)} 
-        Figure 1: Adoption curves for 95% end-use electrification by {target_year.value}
-
-
-        </center>
 
         Click on the **`Loadshape`** tab to develop the composite load shape for any given year.
         """
@@ -372,22 +292,11 @@ def __(
     aggregation,
     by,
     by_month,
-    checkbox_eu1,
-    checkbox_eu2,
-    checkbox_eu3,
-    checkbox_eu4,
-    checkbox_eu5,
-    cluster_name,
-    d_weights,
     day_type,
-    daytype,
-    fig1,
     fig2,
-    g_weights,
     mo,
     sector,
     study_year,
-    total_evs,
     type,
     view_month,
 ):
@@ -402,7 +311,6 @@ def __(
         The overall loadshape of {type.value} in {by.value} is generated by changing each affected enduse loadshape based on the load growth from electrification of the end-use accumulated up to that year. You can change the time of year for which the load shape is generated, as well as which day type and aggregation to use, as shown in Table 3.
 
         <table>
-          <caption>Table 3: Loadshape forecast parameters</caption>
           <tr><th>Loadshape year</th><td>{study_year}</td></tr>
           <tr><th>Season</th><td>{view_month} {by_month}</td></tr>
           <tr><th>Daytype</th><td>{day_type}</td></tr>
@@ -411,78 +319,12 @@ def __(
 
         <center>
             {mo.as_html(fig2)}
-            Figure 2: Aggregated {type.value} loadshape for {study_year.value}
         </center>
 
         Click on the **`Results`** tab to see the overall results for this scenario.
         """
         )
-    elif sector.value == "Transportation": 
-        loadshape_view = mo.md(
-            f"""  
-        [TODO]
 
-        <table>
-        <caption>Table 1: Scenario description</caption>
-        <tr><th align=left>Select the day type</th><td align=left>{daytype}</td></tr>
-        <tr><th align=left>Optional: select weights for each group [TODO]</th><td align=left>{g_weights}</td><td align=left></td></tr>
-        <tr><th align=left>Optional: select weights for each distribution [TODO]</th><td align=left>{d_weights}</td><td align=left></td></tr>
-        </table>
-
-
-        <table>
-          <caption>Table 2: End-use EV loads</caption>
-          <tr>
-            <th>End-use</th>
-            <th>Enable</th>
-          </tr>
-          <tr>
-            <th>{cluster_name[0]}</th>
-            <td>{checkbox_eu1}</td>
-        """ +
-
-        f"""
-          </tr>
-          <tr>
-            <th>{cluster_name[1]}</th>
-            <td>{checkbox_eu2}</td>
-        """ +
-
-        f"""
-          </tr>
-          <tr>
-            <th>{cluster_name[2]}</th>
-            <td>{checkbox_eu3}</td>
-        """ +
-
-        f"""
-          </tr>
-          <tr>
-            <th>{cluster_name[3]}</th>
-            <td>{checkbox_eu4}</td>
-        """ +
-
-        f""" 
-        </tr>
-          <tr>
-            <th>{cluster_name[4]}</th>
-            <td>{checkbox_eu5}</td>
-            """ +
-
-        f"""
-        </table>
-
-
-        <center>
-            {mo.as_html(fig1)}
-            Figure 1: Aggregated loadshape for {total_evs.value} EVs
-        </center>
-
-
-
-        Click on the **`Results`** tab to see the overall results for this scenario.
-        """
-        )
     return loadshape_view,
 
 
@@ -495,37 +337,108 @@ def __(by, mo, nrel_get_data, sector, type, view):
     if sector.value == "Residential" or sector.value == "Commercial":
         df = nrel_get_data(sector.value, view.value, by.value, type.value)
 
-            #
         # Dropdown for electrification stuff
         #
         # What is the target year set for the state
         target_year = mo.ui.slider(2023, 2080, value=2045)
         #start_year = mo.ui.slider(2000, 2080, value=2023)
         data_model_year = 2018 # This is NOT a user setting. This is model specific, and for Restock and Comstock data used it"s 2018.
-
-    # api = API()
-
-    # if sector.value == "Resstock": 
-    #     if view.value == "State":
-    #         df = api.get_data_resstock_by_state(by.value, type.value)
-    #     elif view.value == "Climate Zone - Building America":
-    #         df = api.get_data_resstock_by_climatezone(by.value, type.value)
-    #     elif view.value == "Climate Zone - IECC":
-    #         df = api.get_data_resstock_by_climatezone_iecc(by.value, type.value)
-
-    # elif sector.value == "Comstock":
-    #     if view.value == "State":
-    #         df = api.get_data_comstock_by_state(by.value, type.value)
-    #     elif view.value == "Climate Zone - Building America":
-    #         df = api.get_data_comstock_by_climatezone(by.value, type.value)
-    #     elif view.value == "Climate Zone - IECC":
-    #         df = api.get_data_comstock_by_climatezone_iecc(by.value, type.value)
-    # # except HTTPError:
-    # #     raise
-
-    # df = _format_columns_df(df)
-    # df = df[:-1]
     return data_model_year, df, target_year
+
+
+@app.cell
+def __(end_use_box, ev_load_plot, mo, scenario_box, sector):
+    if sector.value == "Transportation": 
+        
+        _intro_line = mo.md(
+            """
+            ## Construct a scenario for analysis
+            """
+        )
+
+        _horizontal = mo.hstack(
+            [
+                mo.vstack(
+                    [
+                        scenario_box,
+                        end_use_box,
+                    ],
+                    align = "center",
+                    gap = 0.5,
+                ),
+                
+                ev_load_plot
+            ],
+            justify = "center",
+            gap = 1
+        )
+        
+        _closing_line = mo.md(
+        f"""
+        [TODO] Click on the **`Results`** tab to see the overall results for this scenario.
+        """
+        )
+        
+        ev_loadshape_view = mo.vstack(
+            [
+                _intro_line,
+                _horizontal,
+                _closing_line
+            ],
+            align = "start",
+            gap = 0.5
+        )
+    return ev_loadshape_view,
+
+
+@app.cell
+def __(
+    checkbox_eu1,
+    checkbox_eu2,
+    checkbox_eu3,
+    checkbox_eu4,
+    checkbox_eu5,
+    cluster_name,
+    d_weights,
+    daytype,
+    fig1,
+    g_weights,
+    mo,
+    sector,
+    total_evs,
+):
+    if sector.value == "Transportation": 
+        scenario_box = mo.md(
+            f""" 
+            | Select   | Values    |
+            |:---------|----------:|
+            |Number of EVs                    |  {total_evs} |
+            |Day Type                         |  {daytype}   |
+            |Group Weights (Optional)         | {g_weights}  |
+            |Distribution Weights (Optional)  | {d_weights}  |
+        """
+        )
+
+        end_use_box = mo.md(
+            f""" 
+            | Type             | Enable          | 
+            |                  |                :|
+            |{cluster_name[0]} | {checkbox_eu1}  |
+            |{cluster_name[1]} | {checkbox_eu2}  |
+            |{cluster_name[2]} | {checkbox_eu3}  |
+            |{cluster_name[3]} | {checkbox_eu4}  |
+            |{cluster_name[4]} | {checkbox_eu5}  |
+
+            """
+        )
+
+        ev_load_plot = mo.md(
+        f"""
+        {mo.as_html(fig1)}
+        """
+            
+        )
+    return end_use_box, ev_load_plot, scenario_box
 
 
 @app.cell
@@ -534,7 +447,6 @@ def __(EV, daytype, df, sector, total_evs):
     # Calculation Step 1
 
     # Calculate the total annual non-electric energy use for the different end-uses
-    # TODO: update when we add more sectors if any have more than 4 end-uses
     if sector.value == "Residential":
         appliance_name = ["Space Heater", "Water Heater", "Clothes Dryer", "Oven"]
         eu1 = df[["Fuel Oil Heating", "Natural Gas Heating", "Propane Heating"]].sum(axis=1)
@@ -596,6 +508,7 @@ def __(
     eu4_year,
     ev,
     loadshapes,
+    mo,
     np,
     plt,
     sector,
@@ -659,6 +572,7 @@ def __(
         plt.ylabel("New Supply (billion kWh)")
         plt.xlabel("year")
         plt.legend(loc=2, prop={"size": 7})
+        plt.title(f"Adoption curves for 95% end-use electrification by {target_year.value}.")
         plt.grid()
 
         fig1 = plt.gca()
@@ -668,7 +582,7 @@ def __(
         plt.figure(figsize=(7,5))
 
         x = loadshapes.index
-        
+
         scaling = 1 / 1000
         unit = "MW"
 
@@ -693,10 +607,15 @@ def __(
         plt.grid()
 
         fig1 = plt.gca()
-        
+
+        ev_data_view = mo.vstack([
+        mo.md("## Loadshape data"),
+        mo.ui.table(loadshapes.round(2),pagination=False)],
+    )
     return (
         K,
         X0,
+        ev_data_view,
         fig1,
         i,
         initial_value,
@@ -849,6 +768,7 @@ def __(
         plt.xticks([0,6,12,18,24])
         # plt.title(str(by.value) + " " + str(sector.value) + " Loadshape with Electrification - " + str(aggregation.value) + " over " + str(by_month.value))
         plt.grid(alpha=0.3)
+        plt.title(f"Aggregated {type.value} loadshape for {study_year.value}")
         plt.legend()
 
         fig2 = plt.gca()
@@ -865,7 +785,7 @@ def __(
         The result of the analysis suggests that the total new energy supply required to meet the load growth from electricifation of {type.value} in {by.value} is {np.round(df['New Supply'].values.sum()/1e9,1)} TWh.  A summary of the peak load impacts is shown in Table 4.
 
         <table style="width:50%">
-          <caption>Table 4 - Peak load changes for {type.value} in {study_year.value}</caption>
+          <caption>Peak load changes for {type.value} in {study_year.value}</caption>
           <tr>
             <th>Load</th>
             <th>Value</th>
