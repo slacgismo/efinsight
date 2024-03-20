@@ -45,6 +45,7 @@ def __():
 def __(
     credits_view,
     data_view,
+    dt,
     electrification_view,
     ev_data_view,
     ev_loadshape_view,
@@ -99,11 +100,11 @@ def __(
 
     """),
         _tabs,
-        mo.md("""---
+        mo.md(f"""---
 
     ---
 
-    *Copyright (C) 2023 Regents of the Leland Stanford Junior University*""")
+    *Copyright (C) {dt.datetime.now().year} Regents of the Leland Stanford Junior University*""")
     ])
     return res_com_tabs, transp_tabs
 
