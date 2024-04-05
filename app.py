@@ -69,7 +69,7 @@ def __(
 
     ---
 
-    *Copyright (C) 2023 Regents of the Leland Stanford Junior University*""")
+    *Copyright (C) {dt.datetime.now().year} Regents of the Leland Stanford Junior University*""")
     ])
     return
 
