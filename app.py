@@ -65,7 +65,7 @@ def __(
             "Report" : report_view,
             "About" : credits_view,
         }),
-        mo.md("""---
+        mo.md(f"""---
 
     ---
 
