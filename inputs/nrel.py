@@ -1,6 +1,6 @@
 # For residential and commercial
-from sg2t.io.loadshapes.nrel.api import API
-from sg2t.io.loadshapes.nrel.naming import BUILDING_TYPES, HOME_TYPES, CLIMATE_ZONES, CLIMATE_ZONES_IECC, NREL_COL_MAPPING
+from sg2t.io.loadshapes.nrel.nbs import BuildStock, API
+from sg2t.io.loadshapes.nrel.naming import BUILDING_TYPES, HOME_TYPES, CLIMATE_ZONES_BA, CLIMATE_ZONES_IECC, NREL_COL_MAPPING
 
 
 sector_vars = {
@@ -14,7 +14,7 @@ sector_vars = {
         },
         "type" : HOME_TYPES,
         "view options" : ['State', 'Climate Zone - Building America','Climate Zone - IECC'],
-        "climate zones ba" : CLIMATE_ZONES,
+        "climate zones ba" : CLIMATE_ZONES_BA,
         "climate zones iecc" : CLIMATE_ZONES_IECC
     },
 
@@ -28,7 +28,7 @@ sector_vars = {
         },
         "type" : BUILDING_TYPES,
         "view options" : ['State', 'Climate Zone - Building America','Climate Zone - IECC'],
-        "climate zones ba": CLIMATE_ZONES,
+        "climate zones ba": CLIMATE_ZONES_BA,
         "climate zones iecc": CLIMATE_ZONES_IECC
 
     }
@@ -42,27 +42,23 @@ def _format_columns_df(df):
     return df
 
 
-def nrel_get_data(sector, view, by, type):
+def nrel_get_data(sector, view, by, type, county):
+    """Returns un-normalized dataset"""
 
     api = API()
 
-    if sector == "Resstock":
-        if view == "State":
-            df = api.get_data_resstock_by_state(by, type)
-        elif view == "Climate Zone - Building America":
-            df = api.get_data_resstock_by_climatezone(by, type)
-        elif view == "Climate Zone - IECC":
-            df = api.get_data_resstock_by_climatezone_iecc(by, type)
+    if view == "State" and county == "All Counties":
+        df = api.get_data_by_state(sector, by, type)
+    elif view == "State" and county != "All Counties":
+        df = api.get_data_by_county(sector, by, type, county_name=county)
+    elif view == "Climate Zone - Building America":
+        df = api.get_data_by_climate_ba(sector, by, type)
+    elif view == "Climate Zone - IECC":
+        df = api.get_data_by_climate_iecc(sector, by, type)
 
-    elif sector == "Comstock":
-        if view == "State":
-            df = api.get_data_comstock_by_state(by, type)
-        elif view == "Climate Zone - Building America":
-            df = api.get_data_comstock_by_climatezone(by, type)
-        elif view == "Climate Zone - IECC":
-            df = api.get_data_comstock_by_climatezone_iecc(by, type)
     # except HTTPError:
     #     raise
 
     df = _format_columns_df(df)
     return df[:-1]
+

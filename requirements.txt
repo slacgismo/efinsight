@@ -1,5 +1,5 @@
 numpy
 pandas
 matplotlib
-sg2t @ git+https://github.com/slacgismo/sg2t
-marimo==0.1.64
+sg2t @ git+https://github.com/slacgismo/sg2t@api-dev
+marimo==0.6.16

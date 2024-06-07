@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.2.13"
+__generated_with = "0.6.16"
 app = marimo.App(width="full")
 
 
@@ -18,11 +18,12 @@ def __():
     import datetime as dt
 
     from sg2t.utils.timeseries import Timeseries
-    from inputs.utils import states
+    from inputs.utils import states, counties
     from inputs.nrel import sector_vars, nrel_get_data
     return (
         Timeseries,
         calendar,
+        counties,
         dt,
         mo,
         np,
@@ -38,6 +39,7 @@ def __():
 def __(
     credits_view,
     data_view,
+    dt,
     electrification_view,
     loadshape_view,
     mo,
@@ -96,10 +98,16 @@ def __(
 
 
 @app.cell
-def __(by, mo, sector, type, view):
+def __(by, mo, refined, sector, type, view):
     #
     # Sector view tab
     #
+
+    # if view.value == "State":
+    #     aggregate_menu = f"<tr><th align=left>Select an aggregation region</th><td align=left>{view}{by}{refined}</td><td align=left></td></tr>"
+    # else:
+    #         aggregate_menu = f"<tr><th align=left>Select an aggregation region</th><td align=left>{view}{by}</td><td align=left></td></tr>"
+
     sector_view = mo.md(
         f"""
     ## Introduction
@@ -112,7 +120,7 @@ def __(by, mo, sector, type, view):
         <caption>Table 1: Scenario description</caption>
         <tr><th align=left>Select the load sector (e.g., residential, commercial)</th><td align=left>{sector}</td></tr>
         <tr><th align=left>Select the customer subsector (e.g., building type)</th><td align=left>{type}</td></tr>
-        <tr><th align=left>Select an aggregation region</th><td align=left>{view}{by}</td><td align=left>(HI and AK not available)</td></tr>
+        <tr><th align=left>Select an aggregation region</th><td align=left>{view}{by}{refined}</td><td align=left></td></tr>
     </table>
 
     Click on the **`Potential`** tab to develop the electrification potential.
@@ -133,7 +141,14 @@ def __(mo, sector_vars):
 
 
 @app.cell
-def __(mo, sector, sector_vars, sectors_avail, states):
+def __(mo, states):
+    # Drop down menu options
+    state = mo.ui.dropdown(states, value = "CA")
+    return state,
+
+
+@app.cell
+def __(counties, mo, sector, sector_vars, sectors_avail, state):
     #
     # Dropdown for main dataframe
     #
@@ -141,24 +156,27 @@ def __(mo, sector, sector_vars, sectors_avail, states):
     for sec_option in sectors_avail:
         if sector.value == sec_option:
             type = mo.ui.dropdown(sector_vars[sec_option]["type"], value = sector_vars[sec_option]["type"][0])
-            state = mo.ui.dropdown(states, value = "CA")
+            county = mo.ui.dropdown(counties[state.value], value = "All Counties")
             view =  mo.ui.dropdown(sector_vars[sec_option]["view options"], value = "State")
             break
-    return sec_option, state, type, view
+    return county, sec_option, type, view
 
 
 @app.cell
-def __(mo, sec_option, sector, sector_vars, state, view):
+def __(county, mo, sec_option, sector, sector_vars, state, view):
     if sector.value == "Resstock" or sector.value == "Comstock":
         if view.value == "State":
             by = state
+            refined = county
         elif view.value == "Climate Zone - Building America":
             by = mo.ui.dropdown(sector_vars[sec_option]["climate zones ba"], value = sector_vars[sec_option]["climate zones ba"][0])
+            refined = ""
         elif view.value == "Climate Zone - IECC":
             by = mo.ui.dropdown(sector_vars[sec_option]["climate zones iecc"], value = sector_vars[sec_option]["climate zones iecc"][0])
+            refined = ""
     else:
         raise NotImplementedError("Only residential and commercial sectors are available.")
-    return by,
+    return by, refined
 
 
 @app.cell
@@ -302,13 +320,14 @@ def __(
 
 
 @app.cell
-def __(by, nrel_get_data, sector, type, view):
+def __(by, nrel_get_data, refined, sector, type, view):
     #
     # Import annual energy data
     #
 
     if sector.value == "Resstock" or sector.value == "Comstock":
-        df = nrel_get_data(sector.value, view.value, by.value, type.value)
+        county_option = refined.value if refined else None
+        df = nrel_get_data(sector.value, view.value, by.value, type.value, county=county_option)
     else:
         # TODO when we have more sectors
         raise NotImplementedError("Only residential and commercial sectors are available.")
@@ -335,7 +354,7 @@ def __(by, nrel_get_data, sector, type, view):
 
     # df = _format_columns_df(df)
     # df = df[:-1]
-    return df,
+    return county_option, df
 
 
 @app.cell
@@ -348,17 +367,23 @@ def __(df, sector):
     if sector.value == "Resstock":
         appliance_name = ["Space Heater", "Water Heater", "Clothes Dryer", "Oven"]
         eu1 = df[["Fuel Oil Heating", "Natural Gas Heating", "Propane Heating"]].sum(axis=1)
-        eu2 = df[["Fuel Oil Hot Water","Natural Gas Hot Water","Propane Hot Water"]].sum(axis=1)
+        eu2 = df[["Fuel Oil Water Heating", "Natural Gas Water Heating","Propane Water Heating"]].sum(axis=1)
         eu3 = df[["Natural Gas Clothes Dryer", "Propane Clothes Dryer"]].sum(axis=1)
         eu4 = df[["Natural Gas Oven", "Propane Oven"]].sum(axis=1)
 
     elif sector.value == "Comstock":
         appliance_name = ["Space Heater", "Water Heater", "Cooling", "Interior Equipment"]
-        eu1 = df[["Other Fuel Heating", "Natural Gas Heating"]].sum(axis=1)
-        eu2 = df[["Other Fuel Water Heating", "Natural Gas Water Heating"]].sum(axis=1)
-        eu3 = df[["Other Fuel Cooling", "Natural Gas Cooling"]].sum(axis=1)
-        eu4 = df[["Other Fuel Interior Equipment", "Natural Gas Interior Equipment"]].sum(axis=1)
-
+        try:
+            eu1 = df[["Other Fuel Heating", "Natural Gas Heating"]].sum(axis=1)
+            eu2 = df[["Other Fuel Water Heating", "Natural Gas Water Heating"]].sum(axis=1)
+            eu3 = df[["Other Fuel Cooling", "Natural Gas Cooling"]].sum(axis=1)
+            eu4 = df[["Other Fuel Interior Equipment", "Natural Gas Interior Equipment"]].sum(axis=1)
+        except KeyError:
+            # Column names/outputs vary between release years
+            eu1 = df[["Other Fuel Heating", "Natural Gas Heating"]].sum(axis=1)
+            eu2 = df[["Other Fuel Water Heating", "Natural Gas Water Heating"]].sum(axis=1)
+            eu3 = df[["District Cooling Total"]].sum(axis=1)
+            eu4 = df[["Natural Gas Interior Equipment"]].sum(axis=1)
     #----------------------------------------------------------------------------#
     appliance = [eu1, eu2, eu3, eu4]
     return appliance, appliance_name, eu1, eu2, eu3, eu4
