@@ -155,7 +155,7 @@ def __(counties, mo, sector, sector_vars, sectors_avail, state):
 
     for sec_option in sectors_avail:
         if sector.value == sec_option:
-            type = mo.ui.dropdown(sector_vars[sec_option]["type"], value = sector_vars[sec_option]["type"][0])
+            type = mo.ui.dropdown(sector_vars[sec_option]["type"], value = sector_vars[sec_option]["type"][1])
             county = mo.ui.dropdown(counties[state.value], value = "All Counties")
             view =  mo.ui.dropdown(sector_vars[sec_option]["view options"], value = "State")
             break
