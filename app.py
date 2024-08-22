@@ -1,0 +1,1076 @@
+import marimo
+
+__generated_with = "0.8.0"
+app = marimo.App(width="medium")
+
+
+@app.cell
+def __():
+    # 
+    # Imported packages and modules
+    #
+
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import marimo as mo
+    import calendar
+    import datetime as dt
+
+    from sg2t.utils.timeseries import Timeseries
+    from inputs.utils import states
+    from inputs.nrel import sector_vars, nrel_get_data
+    return (
+        Timeseries,
+        calendar,
+        dt,
+        mo,
+        np,
+        nrel_get_data,
+        pd,
+        plt,
+        sector_vars,
+        states,
+    )
+
+
+@app.cell
+def __(
+    credits_view,
+    data_view,
+    dt,
+    electrification_view,
+    loadshape_view,
+    mo,
+    report_view,
+    results_view,
+    sector_view,
+):
+    #
+    # Main page
+    #
+
+    mo.vstack([mo.md("""# North American Electrification Loadshape Forecasting
+
+    CAUTION: This is software is currently under development. Use of the output from this software is not recommended at this time.
+
+    ---
+
+    """),
+        mo.ui.tabs({
+            "Introduction" : sector_view,
+            "Potential" : electrification_view,
+            "Loadshape" : loadshape_view,
+            "Results" : results_view,
+            "Data" : data_view,
+            "Report" : report_view,
+            "About" : credits_view,
+        }),
+        mo.md(f"""---
+
+    ---
+
+    *Copyright (C) {dt.datetime.now().year} Regents of the Leland Stanford Junior University*""")
+    ])
+    return
+
+
+@app.cell
+def __(
+    credits_view,
+    data_view,
+    electrification_view,
+    loadshape_view,
+    mo,
+    results_view,
+    sector_view,
+):
+    report_view = mo.vstack([
+        sector_view,
+        electrification_view,
+        loadshape_view,
+        results_view,
+        data_view,
+        credits_view,
+    ])
+    return report_view,
+
+
+@app.cell
+def __(by, mo, sector, type, view):
+    #
+    # Sector view tab
+    #
+    sector_view = mo.md(
+        f"""
+    ## Introduction
+
+    This tool performs loadshape forecasting for residential and commercial buildings using publicly available datasets. Building loadshapes are generated using NREL <a href="https://resstock.nrel.gov/" target="_blank">Resstock</a> and <a href="https://comstock.nrel.gov/" target="_blank">Comstock</a> data sets. An important assumption in electricity loadshape forecasts is the amount of natural gas consumption that will be converted to electric energy demand, which is expected to vary by region, sector, and subsector. 
+
+    The first step in generating a loadshape forecast is to identify the region, sector, and subsector for which you want the loadshape forecast, as shown in Table 1.
+
+    <table>
+        <caption>Table 1: Scenario description</caption>
+        <tr><th align=left>Select the load sector (e.g., residential, commercial)</th><td align=left>{sector}</td></tr>
+        <tr><th align=left>Select the customer subsector (e.g., building type)</th><td align=left>{type}</td></tr>
+        <tr><th align=left>Select an aggregation region</th><td align=left>{view}{by}</td><td align=left>(HI and AK not available)</td></tr>
+    </table>
+
+    Click on the **`Potential`** tab to develop the electrification potential.
+    """
+    )
+    return sector_view,
+
+
+@app.cell
+def __(mo, sector_vars):
+    #
+    # Import sector details
+    #
+
+    sectors_avail = list(sector_vars.keys())
+    sectors_avail.append("EPRI-Industrial")
+    sector =  mo.ui.dropdown(sectors_avail, value = sectors_avail[0])
+    return sector, sectors_avail
+
+
+@app.cell
+def __(mo, sector, sector_vars, sectors_avail, states):
+    #
+    # Dropdown for main dataframe
+    #
+
+    for sec_option in sectors_avail:
+        if sector.value == "EPRI-Industrial":
+            type = mo.ui.dropdown(["Industrial Building"],value = "Industrial Building")
+            state = mo.ui.dropdown(["CA/NV"],value = "CA/NV")
+            view =  mo.ui.dropdown(["Region"],value = "Region")
+            break
+        if sector.value == sec_option:
+            type = mo.ui.dropdown(sector_vars[sec_option]["type"], value = sector_vars[sec_option]["type"][0])
+            state = mo.ui.dropdown(states, value = "CA")
+            view =  mo.ui.dropdown(sector_vars[sec_option]["view options"], value = "State")
+            break
+    return sec_option, state, type, view
+
+
+@app.cell
+def __(mo, sec_option, sector, sector_vars, state, view):
+    if sector.value == "Resstock" or sector.value == "Comstock":
+        if view.value == "State":
+            by = state
+        elif view.value == "Climate Zone - Building America":
+            by = mo.ui.dropdown(sector_vars[sec_option]["climate zones ba"], value = sector_vars[sec_option]["climate zones ba"][0])
+        elif view.value == "Climate Zone - IECC":
+            by = mo.ui.dropdown(sector_vars[sec_option]["climate zones iecc"], value = sector_vars[sec_option]["climate zones iecc"][0])
+    elif sector.value == "EPRI-Industrial":
+        by = state
+    else:
+        raise NotImplementedError("Only residential and commercial sectors are available.")
+    return by,
+
+
+@app.cell
+def __(
+    appliance_name,
+    checkbox_eu1,
+    checkbox_eu2,
+    checkbox_eu3,
+    checkbox_eu4,
+    eu1_AR,
+    eu1_year,
+    eu2_AR,
+    eu2_year,
+    eu3_AR,
+    eu3_year,
+    eu4_AR,
+    eu4_year,
+    fig1,
+    mo,
+    start_year,
+    target_year,
+):
+    #
+    # Electrification potential view tab
+    #
+
+    electrification_view = mo.md(
+        f"""
+    ## Electrification Potential
+
+    Now you can develop the total electrification potential over time based on technology adoption rates for each enduse. A technology adoption curve is used to model the technology adoption rates for end-uses. A sigmoid function gives a characteristic "S" shape which tends to start slowly, then accelerates to a peak adoption rate at the peak year, and then declines as it approaches a steady turn-over rate. 
+
+    The target year specifies the year when technology adoption reaches a steady state turn-over rate. The peak adoption year rate can be changed to adjust the shape of the technology adoption function. The default peak adoption rate is set to 50% at the year midway between target and current year. These options are specified in Table 2.
+
+    Start year: {start_year}
+    Target year: {target_year}
+
+    <table>
+      <caption>Table 2: End-use electrification adoption rate</caption>
+      <tr>
+        <th>End-use</th>
+        <th>Enable</th>
+        <th>Peak Year</th>
+        <th>Peak Rate </th>
+      </tr>
+      <tr>
+        <th>{appliance_name[0]}</th>
+        <td>{checkbox_eu1}</td>
+    """ +
+    (f"""
+        <td>{eu1_year} </td>
+        <td>{eu1_AR}%  </td>
+    """ if checkbox_eu1.value else "<td colspan=2>(na)</td>") +
+    f"""
+      </tr>
+      <tr>
+        <th>{appliance_name[1]}</th>
+        <td>{checkbox_eu2}</td>
+    """ +
+    (f"""
+        <td>{eu2_year} </td>
+        <td>{eu2_AR}% </td>
+    """ if checkbox_eu2.value else "<td colspan=2>(na)</td>") +
+    f"""
+      </tr>
+      <tr>
+        <th>{appliance_name[2]}</th>
+        <td>{checkbox_eu3}</td>
+    """ +
+    (f"""
+        <td>{eu3_year} </td>
+        <td>{eu3_AR}% </td>
+    """ if checkbox_eu3.value else "<td colspan=2>(na)</td>") +
+    f"""
+      </tr>
+      <tr>
+        <th>{appliance_name[3]}</th>
+        <td>{checkbox_eu4}</td>
+    """ +
+    (f"""
+        <td>{eu4_year} </td>
+        <td>{eu4_AR}% </td>
+      </tr>
+    """ if checkbox_eu4.value else "<td colspan=2>(na)</td>") +
+    f"""  
+    </table>
+
+    <center>
+
+    {mo.as_html(fig1)} 
+    Figure 1: Adoption curves for 95% end-use electrification by {target_year.value}
+
+
+    </center>
+
+    Click on the **`Loadshape`** tab to develop the composite load shape for any given year.
+    """
+    )
+    return electrification_view,
+
+
+@app.cell
+def __(
+    aggregation,
+    by,
+    by_month,
+    day_type,
+    fig2,
+    mo,
+    study_year,
+    type,
+    view_month,
+):
+    #
+    # Loadshape view tab
+    #
+
+    loadshape_view = mo.md(
+        f"""
+    ## Loadshape Forecast
+
+    The overall loadshape of {type.value} in {by.value} is generated by changing each affected enduse loadshape based on the load growth from electrification of the end-use accumulated up to that year. You can change the time of year for which the load shape is generated, as well as which day type and aggregation to use, as shown in Table 3.
+
+    <table>
+      <caption>Table 3: Loadshape forecast parameters</caption>
+      <tr><th>Loadshape year</th><td>{study_year}</td></tr>
+      <tr><th>Season</th><td>{view_month} {by_month}</td></tr>
+      <tr><th>Daytype</th><td>{day_type}</td></tr>
+      <tr><th>Aggregation</th><td>{aggregation}</td></tr>
+    </table>
+
+    <center>
+        {mo.as_html(fig2)}
+        Figure 2: Aggregated {type.value} loadshape for {study_year.value}
+    </center>
+
+    Click on the **`Results`** tab to see the overall results for this scenario.
+    """
+    )
+    return loadshape_view,
+
+
+@app.cell
+def __(by, nrel_get_data, pd, sector, type, view):
+    #
+    # Import annual energy data
+    #
+
+    if sector.value == "Resstock" or sector.value == "Comstock":
+        df = nrel_get_data(sector.value, view.value, by.value, type.value)
+        # print(type.value)
+    elif sector.value == "EPRI-Industrial":
+        df = pd.read_excel("https://github.com/slacgismo/industrial_energy_consumption/raw/main/EPRI%20End%20Use%20Load%20Shapes.xlsx","WSCC CANV")
+        # print(df)
+        hour_range = []
+        timeDel = 0
+        for hour in df.columns:
+            if hour.startswith("HE"):
+                timeDel = int(hour[2:]) - 1
+                hour_range.append(pd.to_datetime("01/01/2024")+pd.to_timedelta(timeDel,unit="h"))
+        # print(hour_range)
+
+        for h in range(len(hour_range)):
+            df = df.rename(columns={df.columns[4+h]: hour_range[h]})
+        # print(df)
+    else:
+        # TODO when we have more sectors
+        raise NotImplementedError("Only residential and commercial sectors are available.")
+
+    # api = API()
+
+    # if sector.value == "Resstock": 
+    #     if view.value == "State":
+    #         df = api.get_data_resstock_by_state(by.value, type.value)
+    #     elif view.value == "Climate Zone - Building America":
+    #         df = api.get_data_resstock_by_climatezone(by.value, type.value)
+    #     elif view.value == "Climate Zone - IECC":
+    #         df = api.get_data_resstock_by_climatezone_iecc(by.value, type.value)
+
+    # elif sector.value == "Comstock":
+    #     if view.value == "State":
+    #         df = api.get_data_comstock_by_state(by.value, type.value)
+    #     elif view.value == "Climate Zone - Building America":
+    #         df = api.get_data_comstock_by_climatezone(by.value, type.value)
+    #     elif view.value == "Climate Zone - IECC":
+    #         df = api.get_data_comstock_by_climatezone_iecc(by.value, type.value)
+    # # except HTTPError:
+    # #     raise
+
+    # df = _format_columns_df(df)
+    # df = df[:-1]
+    return df, h, hour, hour_range, timeDel
+
+
+@app.cell
+def __(day_int, df, season_int, sector):
+    # 
+    # Calculation Step 1
+
+    # Calculate the total annual non-electric energy use for the different end-uses
+    # TODO: update when we add more sectors if any have more than 4 end-uses
+    if sector.value == "Resstock":
+        appliance_name = ["Space Heater", "Water Heater", "Clothes Dryer", "Oven"]
+        eu1 = df[["Fuel Oil Heating", "Natural Gas Heating", "Propane Heating"]].sum(axis=1)
+        eu2 = df[["Fuel Oil Hot Water","Natural Gas Hot Water","Propane Hot Water"]].sum(axis=1)
+        eu3 = df[["Natural Gas Clothes Dryer", "Propane Clothes Dryer"]].sum(axis=1)
+        eu4 = df[["Natural Gas Oven", "Propane Oven"]].sum(axis=1)
+
+    elif sector.value == "Comstock":
+        appliance_name = ["Space Heater", "Water Heater", "Cooling", "Interior Equipment"]
+        eu1 = df[["Other Fuel Heating", "Natural Gas Heating"]].sum(axis=1)
+        eu2 = df[["Other Fuel Water Heating", "Natural Gas Water Heating"]].sum(axis=1)
+        eu3 = df[["Other Fuel Cooling", "Natural Gas Cooling"]].sum(axis=1)
+        eu4 = df[["Other Fuel Interior Equipment", "Natural Gas Interior Equipment"]].sum(axis=1)
+
+    elif sector.value == "EPRI-Industrial":
+        appliance_name = ["HVAC", "Lighting", "Machine Drives", "Process Heating"]
+        eu1 = df.iloc[day_int + season_int + 0,4:]
+        eu2 = df.iloc[day_int + season_int + 6,4:]
+        eu3 = df.iloc[day_int + season_int + 12,4:]
+        eu4 = df.iloc[day_int + season_int + 18,4:]
+
+    #----------------------------------------------------------------------------#
+    appliance = [eu1, eu2, eu3, eu4]
+    # print(appliance)
+    return appliance, appliance_name, eu1, eu2, eu3, eu4
+
+
+@app.cell
+def __(
+    appliance,
+    appliance_name,
+    checkbox_eu1,
+    checkbox_eu2,
+    checkbox_eu3,
+    checkbox_eu4,
+    data_model_year,
+    eu1_AR,
+    eu1_year,
+    eu2_AR,
+    eu2_year,
+    eu3_AR,
+    eu3_year,
+    eu4_AR,
+    eu4_year,
+    np,
+    plt,
+    start_year,
+    target_year,
+):
+    #
+    # Figure 1 - Electrification potential sigmoid plot
+    #
+
+    def sigmoid(x, L, k, x0):
+        return L / (1 + np.exp(-k*(x-x0)))
+
+    # Generate x values
+    x = np.arange(start_year.value, target_year.value+1, 1)
+    new_sup = np.zeros((len(x), 4))
+
+    X0 = [eu1_year.value, eu2_year.value, eu3_year.value, eu4_year.value]
+    K = [eu1_AR.value, eu2_AR.value, eu3_AR.value, eu4_AR.value]
+
+    # applying arithmetic or geometric growth rate to achieve electrification
+    for i in range(len(appliance)):
+        # Initial and target value
+        initial_value = appliance[i].sum()
+
+        # Calculate parameters
+        x0 = X0[i]
+        k = K[i]/100  # adjust this to suit your needs
+
+        new_sup[:,i] = sigmoid(x, 1, k, x0)
+        new_sup[:,i] = (new_sup[:,i] - min(new_sup[:,i])) / (max(new_sup[:,i]) - min(new_sup[:,i])) 
+
+        # If data_model_year > start_year, backpropagate data by appropriate growth amount to start at zero electrification at start_year
+        if data_model_year > start_year.value and data_model_year in x:
+            # Find growth amount at model year
+            model_year_idx = list(x).index(data_model_year)
+            model_year_supply_growth = new_sup[model_year_idx]
+            # Adjust what appliance initial consumption is by the growth at model year
+            initial_value /= model_year_supply_growth
+
+        # Get new supply
+        new_sup[:,i] = new_sup[:,i] * initial_value
+
+    plt.figure(figsize=(7,5))
+
+    if checkbox_eu1.value == True:
+        plt.plot(x, new_sup[:,0]/1e9, color="tab:blue", label = f"{appliance_name[0]}")
+        plt.axvline(x=X0[0],ls=":", color="tab:blue", label= f"Peak adoption year - {appliance_name[0]}")
+    if checkbox_eu2.value == True:
+        plt.plot(x, new_sup[:,1]/1e9, color="tab:orange", label = f"{appliance_name[1]}")
+        plt.axvline(x=X0[1], ls=":", color="tab:orange", label= f"Peak adoption year - {appliance_name[1]}")
+    if checkbox_eu3.value == True:
+        plt.plot(x, new_sup[:,2]/1e9, color="tab:green", label = f"{appliance_name[2]}")
+        plt.axvline(x=X0[2], ls=":", color="tab:green", label= f"Peak adoption year - {appliance_name[2]}")
+    if checkbox_eu4.value == True:
+        plt.plot(x, new_sup[:,3]/1e9,color="tab:red", label = f"{appliance_name[3]}")
+        plt.axvline(x=X0[3], ls=":", color="tab:red", label= f"Peak adoption year - {appliance_name[3]}")
+
+
+    # plt.axvline(x=X0[0], color="b", ls=":", label="Peak Adoption Year")
+    plt.ylabel("New Supply (billion kWh)")
+    plt.xlabel("year")
+    plt.legend(loc=2, prop={"size": 6})
+    plt.grid()
+
+    fig1 = plt.gca()
+    return (
+        K,
+        X0,
+        fig1,
+        i,
+        initial_value,
+        k,
+        model_year_idx,
+        model_year_supply_growth,
+        new_sup,
+        sigmoid,
+        x,
+        x0,
+    )
+
+
+@app.cell
+def __(mo):
+    #
+    # Checkboxes for Figure 1
+    #
+    checkbox_eu1 = mo.ui.checkbox(True)
+    checkbox_eu2 = mo.ui.checkbox(False)
+    checkbox_eu3 = mo.ui.checkbox(False)
+    checkbox_eu4 = mo.ui.checkbox(False)
+    return checkbox_eu1, checkbox_eu2, checkbox_eu3, checkbox_eu4
+
+
+@app.cell
+def __(
+    K,
+    Timeseries,
+    X0,
+    aggregation,
+    appliance,
+    data_model_year,
+    day_int,
+    day_type,
+    df,
+    loadshape_analysis,
+    month_end,
+    month_start,
+    np,
+    pd,
+    season_int,
+    sector,
+    sigmoid,
+    start_year,
+    study_year,
+    target_year,
+    timezone,
+):
+    #
+    # Calculation for the new supply for a given year
+    #
+    year = int(study_year.value)
+    x1 = np.arange(start_year.value, target_year.value + 1, 1)
+
+    # If study year is after target year, set it to target year, fully electrified
+    if year > target_year.value:
+        year = target_year.value
+        year_idx = list(x1).index(target_year.value)
+
+    if year in list(x1):
+        year_idx = list(x1).index(year)
+
+    elif year < list(x1)[0]:
+        # Electrification has not started yet
+        # Assume state is same as start year
+        year = list(x1)[0]
+        year_idx = 0
+
+    new_sup_sum = []
+
+    for ii, ap in enumerate(appliance):
+        # Get new supply for all years
+        new_sup1 = sigmoid(x1, 1, K[ii]/100, X0[ii])
+        # Normalize sigmoid from 0 to 1
+        new_sup1 = (new_sup1 - min(new_sup1)) / (max(new_sup1) - min(new_sup1))
+
+        # If data_model_year > start_year, backpropagate data by appropriate growth amount to start at zero electrification at start_year
+        if data_model_year > start_year.value and data_model_year in x1:
+            # Find growth amount at model year
+            model_year_idx_calc = list(x1).index(data_model_year)
+            model_year_supply_growth_calc = new_sup1[model_year_idx_calc]
+            # Adjust what appliance initial consumption is by the growth at model year
+            ap /= model_year_supply_growth_calc
+
+        elif data_model_year > target_year.value: # not in range of years, ie model data is fully electrified 
+            raise("Not Implemented.")
+
+        # For a given study year, retrieve the corresponding index
+        new_sup1 = new_sup1[year_idx] * ap
+        new_sup_sum.append(new_sup1.values)
+
+    # Sum up the value for all appliances
+    if sector.value == "Resstock" or sector.value == "Comstock":
+        new_supply = np.asarray(new_sup_sum).transpose().sum(axis=1)
+
+        df["New Supply"] = new_supply
+        df["New Electricity Total"] = new_supply  + df["Electricity Total"]
+        # print(df)
+        #
+        # Aggregation loadshape
+        #
+
+        df_agg = Timeseries.timeseries_aggregate(df, aggregation.value, month_start, month_end, day_type.value)
+
+        # Time zone adjusting
+        shift = timezone.value
+        df_old_values = df_agg[:-shift]
+        df_agg = df_agg.shift(periods=shift)
+        df_agg[shift:] = df_old_values.values
+
+        df_agg["hour"] = pd.date_range("00:00", "23:45", freq="1h").hour
+        # df_agg["minute"] = pd.date_range("00:00", "23:45", freq="1").minute
+
+        df_agg["Load Growth"] = (df_agg["New Supply"]/df_agg["Electricity Total"]).values 
+
+        t = np.linspace(0,24,len(df_agg))
+
+        # Loadshape analysis
+        peak, peak_time, new_peak, new_peak_time, load_growth, supply_peak, supply_peak_time = loadshape_analysis(df_agg)
+        # print(df_agg)
+    elif sector.value == "EPRI-Industrial":
+        df_new = df.iloc[:,4:].T
+        # print(df_new)
+        new_supply = np.asarray(new_sup_sum).transpose().sum(axis=1)
+
+        df_new = df_new.assign(new_sup = new_supply)
+        df_new = df_new.assign(new_elec = (new_supply + df_new[day_int + season_int + 0]))
+        df_new = df_new.rename(columns={"new_sup":"New Supply","new_elec":"New Electricity Total"})
+        # print(df_new)
+
+        df_new.index = pd.DatetimeIndex(df_new.index)
+        # print(df_new)
+
+        #
+        # Aggregation loadshape
+        #
+
+        # df_agg = Timeseries.timeseries_aggregate(df_new, aggregation.value, month_start, month_end, day_type.value)
+
+        # Time zone adjusting
+        # shift = timezone.value
+        # df_old_values = df_agg[:-shift]
+        # df_agg = df_agg.shift(periods=shift)
+        # df_agg[shift:] = df_old_values.values
+        # print(df_agg)
+        # df_agg[0].plot()
+        # plt.show()
+
+        # df_agg["hour"] = pd.date_range("00:00", "23:00", freq="1h").hour
+        # df_agg["hour"] = df_new.index
+        # # df_agg["minute"] = pd.date_range("00:00", "23:45", freq="1").minute
+
+        df_new["Load Growth"] = (df_new["New Supply"]/1).values 
+
+        t = np.linspace(0,24,len(df_new))
+
+        # Loadshape analysis
+        peak, peak_time, new_peak, new_peak_time, load_growth, supply_peak, supply_peak_time = loadshape_analysis(df_new)
+        # mo.md(f"Nothing to see here")
+        # print(df_new)
+    return (
+        ap,
+        df_agg,
+        df_new,
+        df_old_values,
+        ii,
+        load_growth,
+        model_year_idx_calc,
+        model_year_supply_growth_calc,
+        new_peak,
+        new_peak_time,
+        new_sup1,
+        new_sup_sum,
+        new_supply,
+        peak,
+        peak_time,
+        shift,
+        supply_peak,
+        supply_peak_time,
+        t,
+        x1,
+        year,
+        year_idx,
+    )
+
+
+@app.cell
+def __(by, df_agg, mo, study_year):
+    class SaveData:
+        """
+        This class determines what gets saved.
+        """
+        def __init__(self):
+            # CSV name
+            self.by_val = by.value
+            self.yr = study_year.value
+            # headers
+            # TODO: add headers to CSV corresponding to query
+            self.headers = []
+            # TODO: add units to current columns headers as well
+
+        def save_csv(self):
+            df_agg.to_csv(f"sg2t_electrification_loadshapes_{self.by_val}_{self.yr}.csv", index=False)
+            return self
+
+    save_data = SaveData()
+
+    save_to_csv = mo.ui.button(
+        value=save_data,
+        on_click=lambda save_data: save_data.save_csv(),
+        label="Save to CSV",
+    )
+    return SaveData, save_data, save_to_csv
+
+
+@app.cell
+def __(i, sector):
+    #
+    # Loadshape Analysis
+    #
+
+    def loadshape_analysis(df):
+
+        if sector.value == "Resstock" or sector.value == "Comstock":
+            # Current peak value and timing
+            current_peak = df[df["Electricity Total"] == df["Electricity Total"].max()]
+            val = current_peak["Electricity Total"].values/1e3 *(60/15)
+            current_peak_time = str(current_peak.hour.values[0]) + ":00"
+
+            # New peak value and timing
+            new_peak = df[df["New Electricity Total"] == df["New Electricity Total"].max()]
+            new_val = new_peak["New Electricity Total"].values/1e3 *(60/15)
+            new_peak_time = str(new_peak.hour.values[0]) + ":00"
+            load_growth = new_peak["Load Growth"].values[0]*100
+
+            # Greatest New Supply value and timing
+            new_supply_peak = df[df["New Supply"] == df["New Supply"].max()]
+            supply_val = new_supply_peak["New Supply"].values/1e3 *(60/60)
+            supply_peak_time = str(new_supply_peak.hour.values[0]) + ":00"
+
+        elif sector.value == "EPRI-Industrial":
+            # Current peak value and timing
+
+            current_peak = df[df[i] == df[i].max()]
+            # print(current_peak.index[0])
+            val = current_peak[i].values/1e3 *(60/15)
+            current_peak_time = str(current_peak.index[0])
+
+            # current_peak.index.values[0]
+            # New peak value and timing
+            new_peak = df[df["New Electricity Total"] == df["New Electricity Total"].max()]
+            new_val = new_peak["New Electricity Total"].values/1e3 *(60/60)
+            new_peak_time = str(new_peak.index.values[0]) + ":00"
+            load_growth = new_peak["Load Growth"].values[0]*100
+
+            # Greatest New Supply value and timing
+            new_supply_peak = df[df["New Supply"] == df["New Supply"].max()]
+            supply_val = new_supply_peak["New Supply"].values/1e3 *(60/60)
+            supply_peak_time = str(new_supply_peak.index.values[0]) + ":00"
+
+        return val, current_peak_time, new_val, new_peak_time, load_growth, supply_val, supply_peak_time
+    return loadshape_analysis,
+
+
+@app.cell
+def __(mo):
+    #
+    # Dropdown for electrification stuff
+    #
+    # What is the target year set for the state
+    target_year = mo.ui.slider(2024, 2080, value=2045)
+    #start_year = mo.ui.slider(2000, 2080, value=2023)
+    data_model_year = 2018 # This is NOT a user setting. This is model specific, and for Restock and Comstock data used it"s 2018.
+    return data_model_year, target_year
+
+
+@app.cell
+def __(mo, target_year):
+    # When did electrification measures begin in the state
+    start_year = mo.ui.slider(2000, target_year.value-1, value=2024)
+    return start_year,
+
+
+@app.cell
+def __(mo, start_year, target_year):
+    # End-uses/appliances target years
+    # Resstock: space heater, water heater, clothes dryer, cooking
+    # Comstock: space heater, water heater, cooling, interior equipment
+    eu1_year = mo.ui.number(2000,2100, value=int((target_year.value + start_year.value)/2))
+    eu2_year = mo.ui.number(2000,2100, value=int((target_year.value + start_year.value)/2))
+    eu3_year = mo.ui.number(2000,2100, value=int((target_year.value + start_year.value)/2))
+    eu4_year = mo.ui.number(2000,2100, value=int((target_year.value + start_year.value)/2))
+
+    AR_options = dict(start=5,stop=100,step=5,value=50)
+    eu1_AR = mo.ui.number(**AR_options)
+    eu2_AR = mo.ui.number(**AR_options)
+    eu3_AR = mo.ui.number(**AR_options)
+    eu4_AR = mo.ui.number(**AR_options)
+    return (
+        AR_options,
+        eu1_AR,
+        eu1_year,
+        eu2_AR,
+        eu2_year,
+        eu3_AR,
+        eu3_year,
+        eu4_AR,
+        eu4_year,
+    )
+
+
+@app.cell
+def __(mo, sector):
+    #
+    # Dropdown for aggregation parameters
+    #
+
+    timezone = mo.ui.dropdown({"EST":-3, "EDT":-4,"CST":-3, "CDT":-4, "MST":-3, "MDT":-4, "PST":-3,"PDT":-4}, value = "PST")
+    months = ["January", "February", "March", "April", "May", "June", "July",
+              "August", "September", "October", "November", "December"]
+    month = mo.ui.dropdown(months, value = months[0])
+    season = mo.ui.dropdown(["winter", "spring", "summer", "fall"], value = "winter")
+    ind_season = mo.ui.dropdown(["peak","off peak"],value = "peak")
+
+    if sector.value == "Resstock" or sector.value == "Comstock": 
+        view_month = mo.ui.dropdown(["by month", "by season", "all-year"], value = "by month")
+    elif sector.value == "EPRI-Industrial":
+        view_month = mo.ui.dropdown(["by industrial season"], value = "by industrial season")
+
+    day_type = mo.ui.dropdown(["weekday", "weekend"], value = "weekday")
+    aggregation = mo.ui.dropdown(["avg", "sum"], value = "avg")
+    return (
+        aggregation,
+        day_type,
+        ind_season,
+        month,
+        months,
+        season,
+        timezone,
+        view_month,
+    )
+
+
+@app.cell
+def __(day_type):
+    if day_type.value == "weekday":
+        day_int = 0
+    elif day_type.value == "weekend":
+        day_int = 2
+    return day_int,
+
+
+@app.cell
+def __(mo, start_year, target_year):
+    study_year = mo.ui.slider(start_year.value, target_year.value)
+    return study_year,
+
+
+@app.cell
+def __(ind_season, month, season, sector, view_month):
+    #
+    # Month dependency
+    #
+    if sector.value == "EPRI-Industrial":
+        by_month = ind_season
+    elif view_month.value == "by month":
+        by_month = month
+    elif view_month.value == "by season":
+        by_month = season
+    elif view_month.value == "all-year":
+        by_month = "all-year"
+    return by_month,
+
+
+@app.cell
+def __(by_month, calendar, sector, view_month):
+    if sector.value == "EPRI-Industrial":
+        if by_month.value == "peak":
+            season_int = 0
+        elif by_month.value == "off peak":
+            season_int = 3
+    elif view_month.value == "by month":
+        month_start = list(calendar.month_name).index(by_month.value)
+        month_end = month_start + 1
+    elif view_month.value == "by season":
+        if by_month.value == "winter":
+            month_start = 1
+            month_end = 3
+        elif by_month.value == "spring":
+            month_start = 3
+            month_end = 6
+        elif by_month.value == "summer":
+            month_start = 6
+            month_end = 9
+        elif by_month.value == "fall":
+            month_start = 9
+            month_end = 12
+    elif view_month.value == "all-year":
+        month_start = 1
+        month_end = 12
+    return month_end, month_start, season_int
+
+
+@app.cell
+def __(day_int, df_agg, df_new, plt, season_int, sector, t):
+    # 
+    # Figure 2 - Loadshape forecast
+    #
+    if sector.value == "Resstock" or sector.value == "Comstock":
+        plt.plot(t, df_agg["Electricity Total"]/1e3 *(60/15), label = "Current Loadshape")
+        plt.plot(t, df_agg["New Electricity Total"]/1e3 *(60/15),
+                 label = "Loadshape with Electrification")
+        #plt.ylim(bottom=0)
+        plt.xlabel("Hour (hr)")
+        plt.ylabel("Power demand (MW)")
+        plt.xticks([0,6,12,18,24])
+        # plt.title(str(by.value) + " " + str(sector.value) + " Loadshape with Electrification - " + str(aggregation.value) + " over " + str(by_month.value))
+        plt.grid(alpha=0.3)
+        plt.legend()
+
+        fig2 = plt.gca()
+    else:
+        plt.plot(t, df_new[day_int + season_int + 0]/1e3 *(60/60), label = "Current Loadshape")
+        plt.plot(t, df_new["New Electricity Total"]/1e3 *(60/60),
+                 label = "Loadshape with Electrification")
+        #plt.ylim(bottom=0)
+        plt.xlabel("Hour (hr)")
+        plt.ylabel("Power demand (MW)")
+        plt.xticks([0,6,12,18,24])
+        # plt.title(str(by.value) + " " + str(sector.value) + " Loadshape with Electrification - " + str(aggregation.value) + " over " + str(by_month.value))
+        plt.grid(alpha=0.3)
+        plt.legend()
+
+        fig2 = plt.gca()
+        # print("In Progress")
+    return fig2,
+
+
+@app.cell
+def __(
+    by,
+    df,
+    df_new,
+    load_growth,
+    mo,
+    new_peak,
+    new_peak_time,
+    np,
+    peak,
+    peak_time,
+    sector,
+    study_year,
+    supply_peak,
+    supply_peak_time,
+    type,
+):
+    #
+    # Results view
+    #
+    if sector.value == "Resstock" or sector.value == "Comstock":
+        results_view = mo.md(f"""
+
+        ## Loadshape Forecast Summary Results
+
+        The result of the analysis suggests that the total new energy supply required to meet the load growth from electricifation of {type.value} in {by.value} is {np.round(df['New Supply'].values.sum()/1e9,1)} TWh.  A summary of the peak load impacts is shown in Table 4.
+
+        <table style="width:50%">
+          <caption>Table 4 - Peak load changes for {type.value} in {study_year.value}</caption>
+          <tr>
+            <th>Load</th>
+            <th>Value</th>
+            <th>Unit</th>
+            <th>Time</th> 
+          </tr>
+          <tr>
+            <th>Current Peak</th>
+            <td>{np.round(peak[0],0)} </td>
+            <td> MW </td>
+            <td>{peak_time}</td>
+
+          </tr>
+          <tr>
+            <th>New Peak</th>
+            <td>{np.round(new_peak[0],0)} </td>
+            <td>MW </td>
+            <td>{new_peak_time} </td>
+          </tr>
+          <tr>
+            <th>New Supply</th>
+            <td>{np.round(supply_peak[0],0)} </td>
+            <td>MW </td>
+            <td>{supply_peak_time}</td>
+          </tr>
+          <tr>
+            <th>Load Growth</th>
+            <td>{np.round(load_growth,2)} </td>
+            <td>% </td>
+            <td></td>
+          </tr>
+        </table>
+
+        Click on the **`Data`** tab to view and download the raw data.
+        """)
+    elif sector.value == "EPRI-Industrial":
+            results_view = mo.md(f"""
+
+        ## Loadshape Forecast Summary Results
+
+        The result of the analysis suggests that the total new energy supply required to meet the load growth from electricifation of {type.value} in {by.value} is {np.round(df_new['New Supply'].values.sum(),1)} kWh.  A summary of the peak load impacts is shown in Table 4.
+
+        <table style="width:50%">
+          <caption>Table 4 - Peak load changes for {type.value} in {study_year.value}</caption>
+          <tr>
+            <th>Load</th>
+            <th>Value</th>
+            <th>Unit</th>
+            <th>Time</th> 
+          </tr>
+          <tr>
+            <th>Current Peak</th>
+            <td>{np.round(1000*peak[0],0)} </td>
+            <td> kW </td>
+            <td>{peak_time}</td>
+
+          </tr>
+          <tr>
+            <th>New Peak</th>
+            <td>{np.round(1000*new_peak[0],0)} </td>
+            <td>kW </td>
+            <td>{new_peak_time} </td>
+          </tr>
+          <tr>
+            <th>New Supply</th>
+            <td>{np.round(1000*supply_peak[0],0)} </td>
+            <td>kW </td>
+            <td>{supply_peak_time}</td>
+          </tr>
+          <tr>
+            <th>Load Growth</th>
+            <td>{np.round(load_growth,2)} </td>
+            <td>% </td>
+            <td></td>
+          </tr>
+        </table>
+
+        Click on the **`Data`** tab to view and download the raw data.
+        """)
+    return results_view,
+
+
+@app.cell
+def __(df_agg, df_new, mo, sector):
+    #
+    # Data view
+    #
+
+    if sector.value == "Resstock" or sector.value == "Comstock":
+        data_view = mo.vstack([
+            mo.md("## Loadshape data"),
+            mo.ui.table(df_agg.round(2).set_index("hour"),pagination=False)],
+        )
+    elif sector.value == "EPRI-Industrial":
+        data_view = mo.vstack([
+            mo.md("## Loadshape data"),
+            mo.ui.table(df_new.round(2),pagination=False)],
+        )
+    return data_view,
+
+
+@app.cell
+def __(mo):
+    credits_view = mo.md("""
+    ## Questions or problems?
+    If you would like to report a problem, consider submitting an issue <a href="https://github.com/slacgismo/efinsight/issues" target="_blank">here</a> in the project's repository. If you have any questions, ideas, or feature requests you'd like to share, you can start a discussion <a href="https://github.com/slacgismo/efinsight/discussions" target="_blank">here</a>. 
+
+    ## Acknowledgments
+
+    This tool was developed by staff at <a href="https://slac.stanford.edu/" target="_blank">SLAC National Accelerator Laboratory</a> and graduate students at <a href="https://stanford.edu/">Stanford University</a>, which operates SLAC for the <a href="https://www.energy.gov/" target="_blank">US Department of Energy</a> under Contract No. DE-AC02-SF00515.
+
+    This tool was implemented on <a href="https://docs.marimo.io/" target="_blank">Marimo</a>, developed under funding from the US Department of Energy's <a href="https://www.energy.gov/eere/solar/solar-energy-technologies-office" target="_blank">Solar Energy Technology Office</a> and the <a href="https://www.energy.gov/oe/advanced-grid-modeling" target="_blank">Office of Electricity"s Advanced Grid Modeling program</a>.
+
+    ## References
+
+    1. Chassin, D.P., S.A. Miskovich, and M. Nijad, "EFInsight - North American Electrification Loadshape Forecasting Tool", SLAC National Accelerator Laboratory, November 2023, URL: <a href="https://github.com/slacgismo/efinsight" target="_blank">`https://github.com/slacgismo/efinsight`</a>, DOI: <a href="https://zenodo.org/records/10413367" target="_blank">`10.5281/zenodo.10413367`</a>.
+
+    2. Nijad, M., S.A. Miskovich, and D.P. Chassin, "US Electrification Potential Impact on Electric Load Composition", SLAC National Accelerator Laboratory, March 2023. Draft available upon request.
+    """)
+    return credits_view,
+
+
+if __name__ == "__main__":
+    app.run()
