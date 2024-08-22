@@ -1,5 +1,6 @@
 numpy
 pandas
 matplotlib
+openpyxl
 sg2t @ git+https://github.com/slacgismo/sg2t
-marimo==0.1.64
+marimo==0.8.0
