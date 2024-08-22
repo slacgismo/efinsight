@@ -415,6 +415,7 @@ def __(
     eu4_year,
     np,
     plt,
+    sector,
     start_year,
     target_year,
 ):
@@ -455,29 +456,55 @@ def __(
         # Get new supply
         new_sup[:,i] = new_sup[:,i] * initial_value
 
-    plt.figure(figsize=(7,5))
+    if sector.value == "Resstock" or sector.value == "Comstock":
+        plt.figure(figsize=(7,5))
+        
+        if checkbox_eu1.value == True:
+            plt.plot(x, new_sup[:,0]/1e9, color="tab:blue", label = f"{appliance_name[0]}")
+            plt.axvline(x=X0[0],ls=":", color="tab:blue", label= f"Peak adoption year - {appliance_name[0]}")
+        if checkbox_eu2.value == True:
+            plt.plot(x, new_sup[:,1]/1e9, color="tab:orange", label = f"{appliance_name[1]}")
+            plt.axvline(x=X0[1], ls=":", color="tab:orange", label= f"Peak adoption year - {appliance_name[1]}")
+        if checkbox_eu3.value == True:
+            plt.plot(x, new_sup[:,2]/1e9, color="tab:green", label = f"{appliance_name[2]}")
+            plt.axvline(x=X0[2], ls=":", color="tab:green", label= f"Peak adoption year - {appliance_name[2]}")
+        if checkbox_eu4.value == True:
+            plt.plot(x, new_sup[:,3]/1e9,color="tab:red", label = f"{appliance_name[3]}")
+            plt.axvline(x=X0[3], ls=":", color="tab:red", label= f"Peak adoption year - {appliance_name[3]}")
+        
+        
+        # plt.axvline(x=X0[0], color="b", ls=":", label="Peak Adoption Year")
+        plt.ylabel("New Supply (billion kWh)")
+        plt.xlabel("year")
+        plt.legend(loc=2, prop={"size": 6})
+        plt.grid()
+        
+        fig1 = plt.gca()
 
-    if checkbox_eu1.value == True:
-        plt.plot(x, new_sup[:,0]/1e9, color="tab:blue", label = f"{appliance_name[0]}")
-        plt.axvline(x=X0[0],ls=":", color="tab:blue", label= f"Peak adoption year - {appliance_name[0]}")
-    if checkbox_eu2.value == True:
-        plt.plot(x, new_sup[:,1]/1e9, color="tab:orange", label = f"{appliance_name[1]}")
-        plt.axvline(x=X0[1], ls=":", color="tab:orange", label= f"Peak adoption year - {appliance_name[1]}")
-    if checkbox_eu3.value == True:
-        plt.plot(x, new_sup[:,2]/1e9, color="tab:green", label = f"{appliance_name[2]}")
-        plt.axvline(x=X0[2], ls=":", color="tab:green", label= f"Peak adoption year - {appliance_name[2]}")
-    if checkbox_eu4.value == True:
-        plt.plot(x, new_sup[:,3]/1e9,color="tab:red", label = f"{appliance_name[3]}")
-        plt.axvline(x=X0[3], ls=":", color="tab:red", label= f"Peak adoption year - {appliance_name[3]}")
-
-
-    # plt.axvline(x=X0[0], color="b", ls=":", label="Peak Adoption Year")
-    plt.ylabel("New Supply (billion kWh)")
-    plt.xlabel("year")
-    plt.legend(loc=2, prop={"size": 6})
-    plt.grid()
-
-    fig1 = plt.gca()
+    elif sector.value == "EPRI-Industrial":
+        plt.figure(figsize=(7,5))
+        
+        if checkbox_eu1.value == True:
+            plt.plot(x, new_sup[:,0], color="tab:blue", label = f"{appliance_name[0]}")
+            plt.axvline(x=X0[0],ls=":", color="tab:blue", label= f"Peak adoption year - {appliance_name[0]}")
+        if checkbox_eu2.value == True:
+            plt.plot(x, new_sup[:,1], color="tab:orange", label = f"{appliance_name[1]}")
+            plt.axvline(x=X0[1], ls=":", color="tab:orange", label= f"Peak adoption year - {appliance_name[1]}")
+        if checkbox_eu3.value == True:
+            plt.plot(x, new_sup[:,2], color="tab:green", label = f"{appliance_name[2]}")
+            plt.axvline(x=X0[2], ls=":", color="tab:green", label= f"Peak adoption year - {appliance_name[2]}")
+        if checkbox_eu4.value == True:
+            plt.plot(x, new_sup[:,3],color="tab:red", label = f"{appliance_name[3]}")
+            plt.axvline(x=X0[3], ls=":", color="tab:red", label= f"Peak adoption year - {appliance_name[3]}")
+        
+        
+        # plt.axvline(x=X0[0], color="b", ls=":", label="Peak Adoption Year")
+        plt.ylabel("New Supply (kWh)")
+        plt.xlabel("year")
+        plt.legend(loc=2, prop={"size": 6})
+        plt.grid()
+        
+        fig1 = plt.gca()
     return (
         K,
         X0,
