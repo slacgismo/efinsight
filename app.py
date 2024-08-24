@@ -458,7 +458,7 @@ def __(
 
     if sector.value == "Resstock" or sector.value == "Comstock":
         plt.figure(figsize=(7,5))
-        
+
         if checkbox_eu1.value == True:
             plt.plot(x, new_sup[:,0]/1e9, color="tab:blue", label = f"{appliance_name[0]}")
             plt.axvline(x=X0[0],ls=":", color="tab:blue", label= f"Peak adoption year - {appliance_name[0]}")
@@ -471,19 +471,19 @@ def __(
         if checkbox_eu4.value == True:
             plt.plot(x, new_sup[:,3]/1e9,color="tab:red", label = f"{appliance_name[3]}")
             plt.axvline(x=X0[3], ls=":", color="tab:red", label= f"Peak adoption year - {appliance_name[3]}")
-        
-        
+
+
         # plt.axvline(x=X0[0], color="b", ls=":", label="Peak Adoption Year")
         plt.ylabel("New Supply (billion kWh)")
         plt.xlabel("year")
         plt.legend(loc=2, prop={"size": 6})
         plt.grid()
-        
+
         fig1 = plt.gca()
 
     elif sector.value == "EPRI-Industrial":
         plt.figure(figsize=(7,5))
-        
+
         if checkbox_eu1.value == True:
             plt.plot(x, new_sup[:,0], color="tab:blue", label = f"{appliance_name[0]}")
             plt.axvline(x=X0[0],ls=":", color="tab:blue", label= f"Peak adoption year - {appliance_name[0]}")
@@ -496,14 +496,14 @@ def __(
         if checkbox_eu4.value == True:
             plt.plot(x, new_sup[:,3],color="tab:red", label = f"{appliance_name[3]}")
             plt.axvline(x=X0[3], ls=":", color="tab:red", label= f"Peak adoption year - {appliance_name[3]}")
-        
-        
+
+
         # plt.axvline(x=X0[0], color="b", ls=":", label="Peak Adoption Year")
         plt.ylabel("New Supply (kWh)")
         plt.xlabel("year")
         plt.legend(loc=2, prop={"size": 6})
         plt.grid()
-        
+
         fig1 = plt.gca()
     return (
         K,
@@ -634,8 +634,9 @@ def __(
         # print(df_new)
         new_supply = np.asarray(new_sup_sum).transpose().sum(axis=1)
 
+        df_new = df_new.assign(Total = ((.25*df_new[day_int + season_int + 0]) + (.25*df_new[day_int + season_int + 6]) + (.25*df_new[day_int + season_int + 12]) + (.25*df_new[day_int + season_int + 18])))
         df_new = df_new.assign(new_sup = new_supply)
-        df_new = df_new.assign(new_elec = (new_supply + df_new[day_int + season_int + 0]))
+        df_new = df_new.assign(new_elec = (new_supply + df_new["Total"]))
         df_new = df_new.rename(columns={"new_sup":"New Supply","new_elec":"New Electricity Total"})
         # print(df_new)
 
@@ -855,7 +856,7 @@ def __(mo, sector):
 @app.cell
 def __(day_type):
     if day_type.value == "weekday":
-        day_int = 0
+        day_int = 1
     elif day_type.value == "weekend":
         day_int = 2
     return day_int,
@@ -913,7 +914,7 @@ def __(by_month, calendar, sector, view_month):
 
 
 @app.cell
-def __(day_int, df_agg, df_new, plt, season_int, sector, t):
+def __(df_agg, df_new, plt, sector, t):
     # 
     # Figure 2 - Loadshape forecast
     #
@@ -931,12 +932,12 @@ def __(day_int, df_agg, df_new, plt, season_int, sector, t):
 
         fig2 = plt.gca()
     else:
-        plt.plot(t, df_new[day_int + season_int + 0]/1e3 *(60/60), label = "Current Loadshape")
-        plt.plot(t, df_new["New Electricity Total"]/1e3 *(60/60),
+        plt.plot(t, df_new["Total"] *(60/60), label = "Current Loadshape")
+        plt.plot(t, df_new["New Electricity Total"] *(60/60),
                  label = "Loadshape with Electrification")
         #plt.ylim(bottom=0)
         plt.xlabel("Hour (hr)")
-        plt.ylabel("Power demand (MW)")
+        plt.ylabel("Power demand (kW)")
         plt.xticks([0,6,12,18,24])
         # plt.title(str(by.value) + " " + str(sector.value) + " Loadshape with Electrification - " + str(aggregation.value) + " over " + str(by_month.value))
         plt.grid(alpha=0.3)
